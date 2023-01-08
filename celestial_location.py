@@ -137,7 +137,7 @@ ra_dict = {
 
 dec_dict = {
     "Andromeda": "+41 00 36",
-    "Antila": "-33 58 52",
+    "Antlia": "-33 58 52",
     "Apus": "-75 35 03",
     "Aquarius": "-09 59 15",
     "Aquila": "+03 22 16",
@@ -253,22 +253,21 @@ def calc_alt(latitude, ra, lst, dec):
     alt = np.arcsin(np.sin(dec*np.pi/180) * np.sin(latitude*np.pi/180) + np.cos(dec*np.pi/180) * np.cos(latitude*np.pi/180) * np.cos(ha*np.pi/180))
     return alt*180/np.pi
 
-def calc_az(latitude, ra, lst, dec):
-  # Calculate hour angle
-  ha = lst - ra
-  # Convert hour angle, declination, and latitude to radians
-  ha_rad = np.radians(ha)
-  dec_rad = np.radians(dec)
-  lat_rad = np.radians(latitude)
-  # Calculate azimuth
-  az = np.arctan2(np.sin(ha_rad), np.cos(ha_rad) * np.sin(lat_rad) - np.tan(dec_rad) * np.cos(lat_rad))
-  # Convert azimuth to degrees
-  az_deg = np.degrees(az)
-  return az_deg
+def calc_az(latitude, ra, lst, dec, alt):
+    sinDec = np.sin(dec*np.pi/180)
+    sinLat = np.sin(latitude*np.pi/180)
+    sinAlt = np.sin(alt*np.pi/180)
+    cosAlt = np.cos(alt*np.pi/180)
+    cosLat = np.cos(latitude*np.pi/180)
+    a = np.arccos((sinDec - sinAlt * sinLat) / (cosAlt * cosLat))
+    if np.sin(lst - ra) > 0:
+        return a*180/np.pi
+    elif np.sin(lst - ra) < 0:
+        return (360 - (a*180/np.pi))
 
 # Print Altitude and Azimuth
 alt = calc_alt(latitude, ra, lst, dec)
-az = calc_az(latitude, ra, lst, dec)
+az = calc_az(latitude, ra, lst, dec, alt)
 
-print(alt)
-print(az)
+print(f"Altitude: {alt}")
+print(f"Azimuth: {az}")
