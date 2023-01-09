@@ -14,7 +14,7 @@ second=currentDateAndTime.second
 longitude=-0
 latitude=0
 
-# Set the longitude and latitude of the location (Normally)
+# Set the longitude and latitude of the observer
 location = input("Observer Location (Address): ")
 def lonlat(address):
     global longitude
@@ -25,6 +25,7 @@ def lonlat(address):
     latitude = float(response[0]["lat"])
 lonlat(location)
 
+# Find the local sidereal time
 def calculate_lst(longitude: float, date: datetime.date, time: datetime.time) -> datetime.time:
     # Convert the date and time to a datetime object
     dt = datetime.datetime.combine(date, time)
@@ -42,7 +43,7 @@ def calculate_lst(longitude: float, date: datetime.date, time: datetime.time) ->
     lst_time = datetime.time(hour=int(lst), minute=int((lst - int(lst)) * 60), second=int((((lst - int(lst)) * 60) - int((lst - int(lst)) * 60)) * 60))
     return lst
 
-# Dictionary of RA and Dec for constellations
+# Dictionary of the right ascension and declination of constellations
 ra_dict = {
     "Andromeda": "00h 43m 31s",
     "Antlia": "10h 00m 35s",
@@ -94,7 +95,7 @@ ra_dict = {
     "Lepus": "05h 35m 45s",
     "Libra": "15h 17m 26s",
     "Lupus": "15h 17m 53s",
-    "Lynx": "07h 57m 42s",
+    "Lynx": "08h 12m 28s",
     "Lyra": "18h 54m 58s",
     "Mensa": "05h 17m 26s",
     "Microscopium": "20h 59m 03s",
@@ -134,7 +135,6 @@ ra_dict = {
     "Volans": "07h 56m 08s",
     "Vulpecula": "20h 04m 58s"
 }
-
 dec_dict = {
     "Andromeda": "+41 00 36",
     "Antlia": "-33 58 52",
@@ -186,7 +186,7 @@ dec_dict = {
     "Lepus": "-18 58 41",
     "Libra": "-16 30 15",
     "Lupus": "-42 01 17",
-    "Lynx": "+47 43 10",
+    "Lynx": "+48 51 41",
     "Lyra": "+35 37 59",
     "Mensa": "-77 32 14",
     "Microscopium": "-35 55 03",
@@ -234,7 +234,7 @@ if (constellation_name in ra_dict) == False:
         print("Please enter a valid constellation name.")
         constellation_name = input("Name of the Constellation: ").lower().strip().title()
 
-# Required parameters for the main functions
+# Required parameters for the main functions...
 # Local Sidereal Time
 lst = 15*(calculate_lst(longitude, datetime.date(currentDateAndTime.year, currentDateAndTime.month, currentDateAndTime.day), datetime.time(currentDateAndTime.hour, currentDateAndTime.minute, currentDateAndTime.second)))
 # Right Ascension
@@ -248,26 +248,32 @@ dec_minute = float(dec_dict[constellation_name][4:6])
 dec_second = float(dec_dict[constellation_name][8:10])
 dec = dec_hour + (dec_minute/60) + (dec_second/3600)
 
+# Calculate Altitude
 def calc_alt(latitude, ra, lst, dec):
     ha = lst - ra  # hour angle
     alt = np.arcsin(np.sin(dec*np.pi/180) * np.sin(latitude*np.pi/180) + np.cos(dec*np.pi/180) * np.cos(latitude*np.pi/180) * np.cos(ha*np.pi/180))
     return alt*180/np.pi
 
-def calc_az(latitude, ra, lst, dec, alt):
-    sinDec = np.sin(dec*np.pi/180)
-    sinLat = np.sin(latitude*np.pi/180)
-    sinAlt = np.sin(alt*np.pi/180)
-    cosAlt = np.cos(alt*np.pi/180)
-    cosLat = np.cos(latitude*np.pi/180)
-    a = np.arccos((sinDec - sinAlt * sinLat) / (cosAlt * cosLat))
-    if np.sin(lst - ra) > 0:
-        return a*180/np.pi
-    elif np.sin(lst - ra) < 0:
-        return (360 - (a*180/np.pi))
+# Caclcuate Azimuth
+def calc_az(dec, ha, lat):
+    sin_dec = np.sin(np.deg2rad(dec))
+    sin_lat = np.sin(np.deg2rad(lat))
+    sin_ha = np.sin(np.deg2rad(ha))
+    cos_dec = np.cos(np.deg2rad(dec))
+    cos_lat = np.cos(np.deg2rad(lat))
+    cos_ha = np.cos(np.deg2rad(ha))
+    alt = np.arcsin(sin_dec * sin_lat + cos_dec * cos_lat * cos_ha)
+    alt = np.rad2deg(alt)
+    a = (sin_dec - np.sin(np.deg2rad(alt)) * sin_lat) / (np.cos(np.deg2rad(alt)) * cos_lat)
+    a = np.arccos(a)
+    a = np.rad2deg(a)
+    if sin_ha < 0:
+        return a
+    else:
+        return 360 - a
 
 # Print Altitude and Azimuth
 alt = calc_alt(latitude, ra, lst, dec)
-az = calc_az(latitude, ra, lst, dec, alt)
-
+az = calc_az(dec, lst - ra, latitude)
 print(f"Altitude: {alt}")
 print(f"Azimuth: {az}")
